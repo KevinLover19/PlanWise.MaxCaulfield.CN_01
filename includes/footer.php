@@ -37,7 +37,7 @@
                         </a>
                     </li>
                     <li>
-                        <a href="/report.php" class="text-[var(--text-secondary)] hover:text-[var(--text-accent)] transition-colors">
+                        <a href="/create_report.php" class="text-[var(--text-secondary)] hover:text-[var(--text-accent)] transition-colors">
                             <i class="fas fa-chart-line mr-2"></i>生成报告
                         </a>
                     </li>

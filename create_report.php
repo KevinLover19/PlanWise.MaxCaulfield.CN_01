@@ -352,181 +352,214 @@ require_once __DIR__ . '/includes/header.php';
     </div>
 </main>
 
-<script>
-// 字符计数
-document.getElementById('business_idea').addEventListener('input', function() {
-    const count = this.value.length;
-    document.getElementById('char-count').textContent = count + '/2000';
-    
-    if (count > 1800) {
-        document.getElementById('char-count').classList.add('text-red-500');
-    } else {
-        document.getElementById('char-count').classList.remove('text-red-500');
-    }
+<script type="module">
+import TaskManager from '/assets/js/task_manager.js';
+
+const ideaField = document.getElementById('business_idea');
+const charCountEl = document.getElementById('char-count');
+const form = document.getElementById('report-form');
+const formWrapper = form.parentElement;
+const progressSection = document.getElementById('analysis-progress');
+const progressBar = document.getElementById('progress-bar');
+const currentStepEl = document.getElementById('current-step');
+const estimatedTimeEl = document.getElementById('estimated-time');
+const partialResultsContainer = document.createElement('div');
+partialResultsContainer.id = 'partial-results';
+partialResultsContainer.className = 'mt-10 space-y-4 hidden';
+partialResultsContainer.innerHTML = `
+    <h3 class="text-xl font-semibold text-[var(--text-primary)]">阶段性结果</h3>
+    <div id="partial-results-list" class="space-y-4"></div>
+`;
+const stepsGrid = progressSection.querySelector('.grid');
+if (stepsGrid) {
+    stepsGrid.after(partialResultsContainer);
+}
+const partialResultsList = partialResultsContainer.querySelector('#partial-results-list');
+
+let activeTask = null;
+let activeReportId = null;
+
+const taskManager = new TaskManager({
+    onProgress: handleProgress,
+    onComplete: handleComplete,
+    onError: handleError,
+    onTimeout: handleTimeout,
 });
 
-// 表单提交处理
-document.getElementById('report-form').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    const formData = new FormData(this);
-    const business_idea = formData.get('business_idea');
-    const analysis_depth = formData.get('analysis_depth');
-    
-    if (!business_idea || business_idea.trim().length < 10) {
-        alert('请详细描述您的商业想法（至少10个字符）');
+ideaField.addEventListener('input', () => {
+    const count = ideaField.value.length;
+    charCountEl.textContent = `${count}/2000`;
+    charCountEl.classList.toggle('text-red-500', count > 1800);
+});
+
+form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+
+    const businessIdea = ideaField.value.trim();
+    if (businessIdea.length < 50) {
+        alert('请至少提供50个字符的商业想法描述，以便AI进行准确分析。');
         return;
     }
-    
-    // 获取选中的关注领域
-    const focus_areas = [];
-    document.querySelectorAll('input[name="focus_areas"]:checked').forEach(checkbox => {
-        focus_areas.push(checkbox.value);
-    });
-    
-    // 开始分析
-    startAnalysis({
-        business_idea: business_idea,
-        industry: formData.get('industry'),
-        analysis_depth: analysis_depth,
-        focus_areas: focus_areas
-    });
+
+    const analysisDepth = form.analysis_depth.value || 'standard';
+    const industry = form.industry.value || '';
+    const focusAreas = Array.from(document.querySelectorAll('input[name="focus_areas"]:checked')).map(item => item.value);
+
+    const requestData = {
+        business_idea: businessIdea,
+        industry,
+        analysis_depth: analysisDepth,
+        focus_areas: focusAreas,
+        title: businessIdea.substring(0, 30) || 'AI商业策略分析',
+    };
+
+    try {
+        toggleForm(false);
+        setEstimatedTime(analysisDepth);
+        resetProgressUI();
+
+        const { taskId, reportId } = await taskManager.createTask('analyze_business_idea', requestData);
+        activeTask = taskId;
+        activeReportId = reportId;
+    } catch (error) {
+        console.error('任务创建失败', error);
+        alert(error.message || '任务创建失败，请稍后再试');
+        toggleForm(true);
+    }
 });
 
-// 开始分析函数
-async function startAnalysis(data) {
-    try {
-        // 获取CSRF token
-        const tokenResponse = await fetch('/api.php?action=get_csrf_token');
-        const tokenData = await tokenResponse.json();
-        
-        // 显示进度界面
-        document.getElementById('report-form').parentElement.style.display = 'none';
-        document.getElementById('analysis-progress').classList.remove('hidden');
-        
-        // 设置预估时间
-        const times = { basic: 5, standard: 15, deep: 30 };
-        document.getElementById('estimated-time').textContent = times[data.analysis_depth] || 5;
-        
-        // 启动分析
-        const startResponse = await fetch('/api.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: new URLSearchParams({
-                action: 'start_analysis',
-                csrf_token: tokenData.csrf_token,
-                business_idea: data.business_idea,
-                industry: data.industry,
-                analysis_depth: data.analysis_depth,
-                focus_areas: JSON.stringify(data.focus_areas)
-            })
-        });
-        
-        const startData = await startResponse.json();
-        
-        if (startData.success) {
-            // 开始轮询进度
-            pollProgress(startData.session_id);
-        } else {
-            alert('启动分析失败：' + (startData.error || '未知错误'));
-            showForm();
-        }
-    } catch (error) {
-        console.error('Error starting analysis:', error);
-        alert('启动分析时发生错误，请重试');
-        showForm();
+function handleProgress(taskId, data) {
+    if (activeTask !== taskId) {
+        return;
     }
-}
 
-// 轮询进度
-async function pollProgress(sessionId) {
-    try {
-        const response = await fetch(`/api.php?action=get_progress&session_id=${sessionId}`);
-        const data = await response.json();
-        
-        if (data.success) {
-            updateProgress(data.progress);
-            
-            if (data.progress.status === 'completed') {
-                // 分析完成，跳转到报告页面
-                window.location.href = `/view_report.php?session_id=${sessionId}`;
-            } else if (data.progress.status === 'failed') {
-                alert('分析失败：' + (data.progress.error_message || '未知错误'));
-                showForm();
-            } else {
-                // 继续轮询
-                setTimeout(() => pollProgress(sessionId), 3000);
-            }
-        } else {
-            throw new Error(data.error || '获取进度失败');
-        }
-    } catch (error) {
-        console.error('Error polling progress:', error);
-        setTimeout(() => pollProgress(sessionId), 5000); // 出错时延长轮询间隔
-    }
-}
+    const total = data.total_steps || 8;
+    const current = data.current_step || 0;
+    const percentage = Math.min(100, Math.floor((current / total) * 100));
+    progressBar.style.width = `${percentage}%`;
 
-// 更新进度显示
-function updateProgress(progress) {
-    // 更新进度条
-    document.getElementById('progress-bar').style.width = progress.progress_percentage + '%';
-    
-    // 更新当前步骤
-    if (progress.current_step_description) {
-        document.getElementById('current-step').innerHTML = `
-            <h3 class="text-lg font-semibold text-[var(--text-primary)] mb-2">正在进行：${getStepName(progress.current_step)}</h3>
-            <p class="text-[var(--text-secondary)]">${progress.current_step_description}</p>
+    if (data.current_message) {
+        currentStepEl.innerHTML = `
+            <h3 class="text-lg font-semibold text-[var(--text-primary)] mb-2">${data.current_message}</h3>
+            <p class="text-[var(--text-secondary)]">AI正在生成高质量的商业洞察...</p>
         `;
     }
-    
-    // 更新步骤状态
-    updateStepStatus(progress.current_step, progress.status);
+
+    updateStepStatus(current);
+    renderPartialResults(data.partial_result || []);
 }
 
-// 获取步骤名称
-function getStepName(stepNumber) {
-    const names = {
-        1: '市场环境分析',
-        2: '竞争对手研究',
-        3: '目标用户画像',
-        4: '商业模式设计',
-        5: '风险评估分析',
-        6: '财务预测建模',
-        7: '营销策略制定',
-        8: '实施计划规划'
-    };
-    return names[stepNumber] || '分析中';
+function handleComplete(taskId, data) {
+    if (activeTask !== taskId) {
+        return;
+    }
+
+    currentStepEl.innerHTML = `
+        <h3 class="text-lg font-semibold text-[var(--text-primary)] mb-2">分析完成</h3>
+        <p class="text-[var(--text-secondary)]">AI已完成所有分析步骤，即将跳转至报告详情。</p>
+    `;
+    progressBar.style.width = '100%';
+    updateStepStatus(data.total_steps || 8);
+
+    setTimeout(() => {
+        if (activeReportId) {
+            window.location.href = `/view_report.php?report_id=${encodeURIComponent(activeReportId)}`;
+        }
+    }, 1200);
 }
 
-// 更新步骤状态
-function updateStepStatus(currentStep, status) {
+function handleError(taskId, data) {
+    if (activeTask !== taskId) {
+        return;
+    }
+
+    alert('任务处理失败：' + (data.error || '请稍后再试'));
+    toggleForm(true);
+}
+
+function handleTimeout(taskId) {
+    if (activeTask !== taskId) {
+        return;
+    }
+
+    alert('任务处理超时，请稍后重试。');
+    toggleForm(true);
+}
+
+function toggleForm(showForm) {
+    if (showForm) {
+        progressSection.classList.add('hidden');
+        formWrapper.style.display = 'block';
+    } else {
+        formWrapper.style.display = 'none';
+        progressSection.classList.remove('hidden');
+    }
+}
+
+function setEstimatedTime(depth) {
+    const times = { basic: 5, standard: 12, deep: 18 };
+    estimatedTimeEl.textContent = times[depth] || 8;
+}
+
+function resetProgressUI() {
+    progressBar.style.width = '0%';
+    currentStepEl.innerHTML = `
+        <h3 class="text-lg font-semibold text-[var(--text-primary)] mb-2">准备分析</h3>
+        <p class="text-[var(--text-secondary)]">AI正在载入分析模板并初始化多模型工作流...</p>
+    `;
+    document.querySelectorAll('.step-item').forEach(item => {
+        const circle = item.querySelector('.w-10');
+        const icon = item.querySelector('i');
+        circle.className = 'w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center mx-auto mb-2';
+        icon.classList.remove('text-white');
+        icon.classList.add('text-gray-600');
+    });
+    partialResultsContainer.classList.add('hidden');
+    partialResultsList.innerHTML = '';
+}
+
+function updateStepStatus(currentStep) {
     document.querySelectorAll('.step-item').forEach((item, index) => {
         const stepNum = index + 1;
-        const icon = item.querySelector('i');
         const circle = item.querySelector('.w-10');
-        
-        if (stepNum < currentStep || (stepNum === currentStep && status === 'completed')) {
-            // 已完成的步骤
-            circle.classList.remove('bg-gray-300');
-            circle.classList.add('bg-green-500');
+        const icon = item.querySelector('i');
+
+        if (stepNum <= currentStep) {
+            circle.className = 'w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-2';
             icon.classList.remove('text-gray-600');
             icon.classList.add('text-white');
-        } else if (stepNum === currentStep) {
-            // 当前进行的步骤
-            circle.classList.remove('bg-gray-300');
-            circle.classList.add('bg-blue-500');
-            icon.classList.remove('text-gray-600');
-            icon.classList.add('text-white');
+        } else {
+            circle.className = 'w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center mx-auto mb-2';
+            icon.classList.remove('text-white');
+            icon.classList.add('text-gray-600');
         }
     });
 }
 
-// 显示表单
-function showForm() {
-    document.getElementById('analysis-progress').classList.add('hidden');
-    document.getElementById('report-form').parentElement.style.display = 'block';
+function renderPartialResults(steps) {
+    if (!steps.length) {
+        return;
+    }
+
+    partialResultsContainer.classList.remove('hidden');
+    partialResultsList.innerHTML = '';
+
+    steps.forEach(step => {
+        const item = document.createElement('div');
+        item.className = 'glass-effect p-4';
+        item.innerHTML = `
+            <div class="flex items-center justify-between mb-2">
+                <h4 class="text-lg font-semibold text-[var(--text-primary)]">${step.title}</h4>
+                <span class="text-sm ${step.status === 'completed' ? 'text-green-500' : 'text-yellow-500'}">
+                    ${step.status === 'completed' ? '已完成' : '进行中'}
+                </span>
+            </div>
+            <div class="text-sm text-[var(--text-secondary)] whitespace-pre-line leading-relaxed">
+                ${step.content ? step.content.substring(0, 400) + (step.content.length > 400 ? '...' : '') : '内容生成中...'}
+            </div>
+        `;
+        partialResultsList.appendChild(item);
+    });
 }
 </script>
 

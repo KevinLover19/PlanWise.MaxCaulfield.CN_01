@@ -33,7 +33,7 @@ require_once __DIR__ . '/includes/header.php';
             
             <div class="flex flex-col sm:flex-row gap-4 justify-center items-center fade-in">
                 <?php if (isset($_SESSION['user_id'])): ?>
-                    <a href="/report.php" class="btn-primary px-8 py-4 text-lg font-semibold rounded-xl">
+                    <a href="/create_report.php" class="btn-primary px-8 py-4 text-lg font-semibold rounded-xl">
                         <i class="fas fa-rocket mr-3"></i>立即开始分析
                     </a>
                     <a href="/dashboard.php" class="px-8 py-4 text-lg font-semibold rounded-xl border border-[var(--border-color)] text-[var(--text-accent)] hover:bg-[var(--bg-glass)] transition-all">
@@ -212,7 +212,7 @@ require_once __DIR__ . '/includes/header.php';
             </p>
             
             <?php if (isset($_SESSION['user_id'])): ?>
-                <a href="/report.php" class="btn-primary px-12 py-4 text-xl font-semibold rounded-xl inline-flex items-center">
+                <a href="/create_report.php" class="btn-primary px-12 py-4 text-xl font-semibold rounded-xl inline-flex items-center">
                     <i class="fas fa-rocket mr-3"></i>立即生成商业报告
                 </a>
             <?php else: ?>
