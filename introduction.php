@@ -41,7 +41,7 @@ $is_logged_in = isset($_SESSION['user_id']);
             
             <div class="flex flex-col sm:flex-row gap-6 justify-center items-center mb-16 fade-in">
                 <?php if ($is_logged_in): ?>
-                    <a href="/report.php" class="btn-primary px-8 py-4 text-lg font-semibold rounded-xl">
+                    <a href="/create_report.php" class="btn-primary px-8 py-4 text-lg font-semibold rounded-xl">
                         <i class="fas fa-rocket mr-3"></i>立即创建分析报告
                     </a>
                     <a href="/dashboard.php" class="px-8 py-4 text-lg font-semibold rounded-xl border border-[var(--border-color)] text-[var(--text-accent)] hover:bg-[var(--bg-glass)] transition-all">
@@ -450,7 +450,7 @@ $is_logged_in = isset($_SESSION['user_id']);
                 
                 <?php if ($is_logged_in): ?>
                     <div class="flex flex-col sm:flex-row gap-6 justify-center items-center">
-                        <a href="/report.php" class="btn-primary px-10 py-4 text-xl font-semibold rounded-xl">
+                        <a href="/create_report.php" class="btn-primary px-10 py-4 text-xl font-semibold rounded-xl">
                             <i class="fas fa-rocket mr-3"></i>立即创建分析报告
                         </a>
                         <a href="/dashboard.php" class="px-10 py-4 text-xl font-semibold rounded-xl border border-[var(--border-color)] text-[var(--text-accent)] hover:bg-[var(--bg-glass)] transition-all">

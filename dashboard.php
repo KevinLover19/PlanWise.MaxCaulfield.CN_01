@@ -149,7 +149,7 @@ require_once __DIR__ . '/includes/header.php';
                 </div>
                 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <a href="/report.php" class="group flex items-center p-6 rounded-xl border border-[var(--border-color)] hover:border-[var(--text-accent)] transition-all duration-300 hover:scale-105">
+                    <a href="/create_report.php" class="group flex items-center p-6 rounded-xl border border-[var(--border-color)] hover:border-[var(--text-accent)] transition-all duration-300 hover:scale-105">
                         <div class="w-12 h-12 bg-gradient-to-r from-green-500 to-teal-600 rounded-full flex items-center justify-center mr-4 group-hover:scale-110 transition-transform">
                             <i class="fas fa-plus text-white text-xl"></i>
                         </div>
@@ -192,7 +192,7 @@ require_once __DIR__ . '/includes/header.php';
                         </div>
                         <h3 class="text-xl font-semibold text-[var(--text-primary)] mb-2">还没有报告</h3>
                         <p class="text-[var(--text-secondary)] mb-6">创建您的第一份商业策略分析报告</p>
-                        <a href="/report.php" class="btn-primary px-8 py-3 text-lg font-semibold rounded-xl inline-flex items-center">
+                        <a href="/create_report.php" class="btn-primary px-8 py-3 text-lg font-semibold rounded-xl inline-flex items-center">
                             <i class="fas fa-plus mr-2"></i>创建报告
                         </a>
                     </div>

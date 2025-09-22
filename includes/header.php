@@ -511,7 +511,7 @@ $canonical_url = $protocol . $domain_name . $_SERVER['REQUEST_URI'];
                     <i class="fas fa-tachometer-alt text-lg"></i>
                     <span class="nav-text ml-1 text-sm hidden md:inline">控制台</span>
                 </a>
-                <a href="/report.php" title="生成报告" class="nav-link p-2 rounded-full text-[var(--text-secondary)] hover:bg-[var(--bg-glass)]">
+                <a href="/create_report.php" title="生成报告" class="nav-link p-2 rounded-full text-[var(--text-secondary)] hover:bg-[var(--bg-glass)]">
                     <i class="fas fa-chart-line text-lg"></i>
                     <span class="nav-text ml-1 text-sm hidden md:inline">生成报告</span>
                 </a>
